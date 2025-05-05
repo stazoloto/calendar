@@ -1,0 +1,9 @@
+class: User
+table: users
+fields:
+    login: String
+    passwordHash: String
+indexes:
+    user_login_idx:
+        fields: login
+        unique: true

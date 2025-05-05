@@ -18,9 +18,8 @@ void run(List<String> args) async {
   );
 
   auth.AuthConfig.set(auth.AuthConfig(
-    minPasswordLength: 8,
+    minPasswordLength: 12,
   ));
 
   await pod.start();
-
 }
