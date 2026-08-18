@@ -20,16 +20,15 @@ func NewEvents(db *sql.DB) *Events {
 
 // Create создает событие
 func (e *Events) Create(ctx context.Context, event *domain.Event) error {
-	_, err := e.db.Exec("INSERT INTO events (title, description, start_at, end_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)",
-		event.Title, event.Description, event.StartAt, event.EndAt, event.CreatedAt, event.UpdatedAt)
+	return e.db.QueryRowContext(ctx, "INSERT INTO events (title, description, start_at, end_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+		event.Title, event.Description, event.StartAt, event.EndAt, event.CreatedAt, event.UpdatedAt).Scan(&event.ID)
 
-	return err
 }
 
 // GetByID получает событие
 func (e *Events) GetByID(ctx context.Context, id int64) (*domain.Event, error) {
 	var event domain.Event
-	err := e.db.QueryRow("SELECT id, title, description, start_at, end_at, created_at, updated_at FROM events WHERE id = $1", id).
+	err := e.db.QueryRowContext(ctx, "SELECT id, title, description, start_at, end_at, created_at, updated_at FROM events WHERE id = $1", id).
 		Scan(&event.ID, &event.Title, &event.Description, &event.StartAt, &event.EndAt, &event.CreatedAt, &event.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -40,7 +39,7 @@ func (e *Events) GetByID(ctx context.Context, id int64) (*domain.Event, error) {
 }
 
 func (e *Events) GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error) {
-	rows, err := e.db.QueryContext(ctx, 
+	rows, err := e.db.QueryContext(ctx,
 		"SELECT id, title, description, start_at, end_at, created_at, updated_at FROM events WHERE start_at >= $1 AND start_at <= $2",
 		from, to)
 	if err != nil {
@@ -91,23 +90,21 @@ func (e *Events) Update(ctx context.Context, id int64, inp *domain.UpdateEventIn
 		argId++
 	}
 
-	if inp.UpdatedAt != nil {
-		setValues = append(setValues, fmt.Sprintf("updated_at=$%d", argId))
-		args = append(args, *inp.UpdatedAt)
-		argId++
-	}
+	setValues = append(setValues, fmt.Sprintf("updated_at=$%d", argId))
+	args = append(args, time.Now())
+	argId++
 
 	setQuery := strings.Join(setValues, ", ")
 
 	query := fmt.Sprintf("UPDATE events SET %s WHERE id=$%d", setQuery, argId)
 	args = append(args, id)
 
-	_, err := e.db.Exec(query, args...)
+	_, err := e.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 // Delete удаляет событие
 func (e *Events) Delete(ctx context.Context, id int64) error {
-	_, err := e.db.Exec("DELETE FROM events WHERE id=$1", id)
+	_, err := e.db.ExecContext(ctx, "DELETE FROM events WHERE id=$1", id)
 	return err
 }

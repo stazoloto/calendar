@@ -1,0 +1,33 @@
+# Бинарник
+/bin/
+/calendar
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Переменные окружения
+.env
+
+# Логи
+*.log
+
+# Зависимости (если используешь vendoring)
+/vendor/
+
+# Временные файлы
+/tmp/
+*.tmp
+
+# Docker
+docker-compose.override.yml
+
+# Данные БД (если вдруг монтируешь локально)
+/data/postgres/
+
+# OS
+.DS_Store
+Thumbs.db

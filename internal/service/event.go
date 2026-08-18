@@ -10,7 +10,7 @@ import (
 type EventsRepository interface {
 	Create(ctx context.Context, event *domain.Event) error
 	GetByID(ctx context.Context, id int64) (*domain.Event, error)
-	Update(ctx context.Context, inp *domain.UpdateEventInput) error
+	Update(ctx context.Context, id int64, inp *domain.UpdateEventInput) error
 	Delete(ctx context.Context, id int64) error
 	GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error)
 }
@@ -28,6 +28,14 @@ func (e *Events) Create(ctx context.Context, event *domain.Event) error {
 		event.CreatedAt = time.Now()
 	}
 
+	if event.Title == "" {
+		return domain.ErrEmptyTitle
+	}
+
+	if event.EndAt.Before(event.StartAt) {
+		return domain.ErrInvalidDateRange
+	}
+
 	return e.repo.Create(ctx, event)
 }
 
@@ -40,7 +48,7 @@ func (e *Events) GetAll(ctx context.Context, from, to time.Time) ([]domain.Event
 }
 
 func (e *Events) Update(ctx context.Context, id int64, inp *domain.UpdateEventInput) error {
-	return e.repo.Update(ctx, inp)
+	return e.repo.Update(ctx, id, inp)
 }
 
 func (e *Events) Delete(ctx context.Context, id int64) error {

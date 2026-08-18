@@ -7,6 +7,8 @@ import (
 
 var (
 	ErrEventNotFound = errors.New("event not found")
+	ErrEmptyTitle = errors.New("title cannot be empty")
+	ErrInvalidDateRange = errors.New("end_at must be after start_at")
 )
 
 type Event struct {
@@ -24,5 +26,4 @@ type UpdateEventInput struct {
 	Description *string    `json:"description"`
 	StartAt     *time.Time `json:"start_at"`
 	EndAt       *time.Time `json:"end_at"`
-	UpdatedAt   *time.Time `json:"updated_at"`
 }
