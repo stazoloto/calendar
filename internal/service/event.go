@@ -12,7 +12,7 @@ type EventsRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.Event, error)
 	Update(ctx context.Context, id int64, inp *domain.UpdateEventInput) error
 	Delete(ctx context.Context, id int64) error
-	GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error)
+	GetAll(ctx context.Context, from, to time.Time, limit, offset int) ([]domain.Event, error)
 }
 
 type Events struct {
@@ -43,11 +43,25 @@ func (e *Events) GetByID(ctx context.Context, id int64) (*domain.Event, error) {
 	return e.repo.GetByID(ctx, id)
 }
 
-func (e *Events) GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error) {
-	return e.repo.GetAll(ctx, from, to)
+func (e *Events) GetAll(ctx context.Context, from, to time.Time, limit, offset int) ([]domain.Event, error) {
+	if to.Before(from) {
+		return nil, domain.ErrInvalidDateRange
+	}
+
+	return e.repo.GetAll(ctx, from, to, limit, offset)
 }
 
 func (e *Events) Update(ctx context.Context, id int64, inp *domain.UpdateEventInput) error {
+	if inp.Title != nil && *inp.Title == "" {
+		return domain.ErrEmptyTitle
+	}
+
+	if inp.StartAt != nil && inp.EndAt != nil {
+		if inp.EndAt.Before(*inp.StartAt) {
+			return domain.ErrInvalidDateRange
+		}
+	}
+
 	return e.repo.Update(ctx, id, inp)
 }
 
