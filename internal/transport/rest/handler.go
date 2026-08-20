@@ -19,7 +19,7 @@ type Events interface {
 	GetByID(ctx context.Context, id int64) (*domain.Event, error)
 	Update(ctx context.Context, id int64, inp *domain.UpdateEventInput) error
 	Delete(ctx context.Context, id int64) error
-	GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error)
+	GetAll(ctx context.Context, from, to time.Time, limit, offset int) ([]domain.Event, error)
 }
 
 type Handler struct {
@@ -34,6 +34,7 @@ func NewHandler(events Events) *Handler {
 
 func (h *Handler) InitRouter() *mux.Router {
 	r := mux.NewRouter()
+	r.Use(loggingMiddleware)
 
 	events := r.PathPrefix("/events").Subrouter()
 	{
@@ -43,6 +44,7 @@ func (h *Handler) InitRouter() *mux.Router {
 		events.HandleFunc("/{id:[0-9]+}", h.updateEvent).Methods(http.MethodPut)
 		events.HandleFunc("/{id:[0-9]+}", h.deleteEvent).Methods(http.MethodDelete)
 	}
+
 	return r
 }
 
@@ -94,7 +96,23 @@ func (h *Handler) getAllEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events, err := h.eventService.GetAll(ctx, from, to)
+	limit := 50
+	if l := query.Get("limit"); l != "" {
+		if limit, err = strconv.Atoi(l); err != nil || limit < 1 {
+			http.Error(w, "invalid 'limit' parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	offset := 0
+	if o := query.Get("limit"); o != "" {
+		if offset, err = strconv.Atoi(o); err != nil || offset < 0 {
+			http.Error(w, "invalid 'offset' parameter", http.StatusBadRequest)
+			return
+		}
+	}
+
+	events, err := h.eventService.GetAll(ctx, from, to, limit, offset)
 	if err != nil {
 		log.Println("getAllEvents() error:", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -129,9 +147,15 @@ func (h *Handler) createEvent(w http.ResponseWriter, r *http.Request) {
 
 	err = h.eventService.Create(ctx, &event)
 	if err != nil {
-		log.Println("createEvent() error:", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		switch {
+		case errors.Is(err, domain.ErrEmptyTitle), errors.Is(err, domain.ErrInvalidDateRange):
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		default:
+			log.Println("createEvent() error:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.WriteHeader(http.StatusCreated)
