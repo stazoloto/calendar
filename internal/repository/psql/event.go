@@ -38,10 +38,14 @@ func (e *Events) GetByID(ctx context.Context, id int64) (*domain.Event, error) {
 	return &event, err
 }
 
-func (e *Events) GetAll(ctx context.Context, from, to time.Time) ([]domain.Event, error) {
+func (e *Events) GetAll(ctx context.Context, from, to time.Time, limit, offset int) ([]domain.Event, error) {
 	rows, err := e.db.QueryContext(ctx,
-		"SELECT id, title, description, start_at, end_at, created_at, updated_at FROM events WHERE start_at >= $1 AND start_at <= $2",
-		from, to)
+		`SELECT id, title, description, start_at, end_at, created_at, updated_at 
+		FROM events 
+		WHERE start_at >= $1 AND start_at <= $2
+		ORDER BY start_at
+		LIMIT $3 OFFSET $4`,
+		from, to, limit, offset)
 	if err != nil {
 		return nil, err
 	}
